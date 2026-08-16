@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Subnet Splitter — Split a Network into Equal Subnets</title>
+<meta name="description" content="Split an IPv4 network into equally-sized subnets, either by choosing a new prefix length or by the number of subnets you need.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' font-size='80'%3E%3Ctext y='.9em'%3E%F0%9F%8C%90%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body><a href="../cdn-cgi/content@id=sdkhsG.EMYEclpblrcpmXpehu3p1txt_WItRgwa4pa4-1786912367.2779694-1.2.1.1-TxjE9VzgsOJrjn9cuoo0i6uWXoCgfUMPzHckTczLQo4vKovItOEKN72KUOY7ryoI.html" aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a>
+<div class="container">
+
+  <header>
+    <a class="brand" href="../index.html">
+      <div>
+        <h1>Subnet Splitter</h1>
+        <p>Break one network into a set of smaller, equally-sized subnets</p>
+      </div>
+    </a>
+    <img class="logo" src="../assets/5pings-logo.png" alt="5pings.net">
+  </header>
+
+  <nav class="toc">
+    <a href="../index.html">Home</a>
+    <a href="../ipv4-calculator/index.html">IPv4 Calculator</a>
+    <a href="index.html" class="active">Subnet Splitter</a>
+    <a href="../vlsm-planner/index.html">VLSM Planner</a>
+    <a href="../ipv6-calculator/index.html">IPv6 Calculator</a>
+    <a href="../reverse-lookup/index.html">Reverse Lookup</a>
+    <a href="../cidr-cheat-sheet/index.html">CIDR Cheat Sheet</a>
+  </nav>
+
+  <section class="card" id="ipv4">
+    <h2>1. Base Network</h2>
+    <p class="subtext">Enter the network you want to split. This is the same calculator as the <a href="../ipv4-calculator/index.html" style="color:var(--accent);">IPv4 Calculator</a> page — a compact copy lives here so the splitter works on its own.</p>
+    <div class="row">
+      <div class="field">
+        <label for="ipInput">IP Address (optionally with /CIDR)</label>
+        <input type="text" id="ipInput" value="192.168.143.210" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="field">
+        <label for="maskSelect">Subnet Mask (if no /CIDR above)</label>
+        <select id="maskSelect"></select>
+      </div>
+      <div class="field" style="flex: 0 0 auto;">
+        <button id="calcBtn">Calculate</button>
+      </div>
+    </div>
+    <div class="error-msg" id="calcError"></div>
+    <p class="subtext" id="baseSummary"></p>
+  </section>
+
+  <section class="card" id="splitter">
+    <h2>2. Split It</h2>
+    <div class="split-controls">
+      <div class="split-option">
+        <input type="radio" name="splitMode" id="modePrefix" value="prefix" checked>
+        <label for="modePrefix" style="margin:0;">Split into new prefix /</label>
+        <input type="text" id="newPrefix" autocomplete="off">
+      </div>
+      <div class="split-option">
+        <input type="radio" name="splitMode" id="modeCount" value="count">
+        <label for="modeCount" style="margin:0;">Split into N subnets:</label>
+        <input type="text" id="subnetCount" autocomplete="off">
+      </div>
+      <button id="splitBtn">Split</button>
+    </div>
+    <div class="error-msg" id="splitError"></div>
+    <div class="visualizer" id="splitVisual" title="Each block is one resulting subnet"></div>
+    <div class="split-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Network</th>
+            <th>CIDR</th>
+            <th>Usable Range</th>
+            <th>Broadcast</th>
+            <th>Usable Hosts</th>
+          </tr>
+        </thead>
+        <tbody id="splitBody"></tbody>
+      </table>
+    </div>
+    <p class="subtext" id="splitNote"></p>
+  </section>
+
+  <details class="card" id="howitworks">
+    <summary>Why split a network into subnets?</summary>
+    <div class="body-pad">
+      <p class="explain">Splitting one large network into smaller subnets reduces broadcast traffic, lets you apply different firewall/VLAN policy per segment, and avoids wasting address space on a department that only needs 10 hosts but was handed a /24 (254 usable addresses).</p>
+      <p class="explain">Every time the prefix grows by 1, the subnet size halves — so splitting a /24 into /26s gives you 4 equal subnets of 64 addresses each. If your subnets need to be <em>different</em> sizes (e.g. 50 hosts here, 10 there), use the <a href="../vlsm-planner/index.html" style="color:var(--accent);">VLSM Planner</a> instead, which packs right-sized blocks efficiently. Full prefix reference: <a href="../cidr-cheat-sheet/index.html" style="color:var(--accent);">CIDR Cheat Sheet</a>.</p>
+    </div>
+  </details>
+
+  <footer>
+    Runs entirely in your browser &mdash; no data is sent anywhere.
+  </footer>
+</div>
+
+<script src="../assets/subnet-tools.js"></script>
+<script>
+(function () {
+  "use strict";
+  const T = window.SubnetTools;
+
+  let currentInfo = null;
+
+  T.setupIPv4Panel({
+    ipInputId: "ipInput",
+    maskSelectId: "maskSelect",
+    calcBtnId: "calcBtn",
+    errorId: "calcError",
+    defaultPrefix: 24,
+    onResult: (info) => {
+      currentInfo = info;
+      const summary = document.getElementById("baseSummary");
+      if (info) {
+        summary.textContent = `Base network: ${T.intToIp(info.networkInt)}/${info.prefix}`;
+        document.getElementById("newPrefix").value = Math.min(info.prefix + 2, 30);
+      } else {
+        summary.textContent = "";
+      }
+    },
+  });
+
+  // -------------------------------------------------------- Subnet Splitter
+  function splitNetwork() {
+    const splitError = document.getElementById("splitError");
+    const splitNote = document.getElementById("splitNote");
+    const splitBody = document.getElementById("splitBody");
+    const splitVisual = document.getElementById("splitVisual");
+    T.showError(splitError, "");
+    splitNote.textContent = "";
+    splitVisual.style.display = "none";
+    splitVisual.innerHTML = "";
+
+    if (!currentInfo) {
+      T.showError(splitError, "Calculate a base network first.");
+      return;
+    }
+
+    const mode = document.querySelector('input[name="splitMode"]:checked').value;
+    let newPrefix;
+
+    if (mode === "prefix") {
+      const val = document.getElementById("newPrefix").value.trim();
+      newPrefix = parseInt(val, 10);
+      if (!/^\d+$/.test(val) || Number.isNaN(newPrefix)) {
+        T.showError(splitError, "Enter a valid new prefix.");
+        return;
+      }
+      if (newPrefix <= currentInfo.prefix || newPrefix > 32) {
+        T.showError(splitError, `New prefix must be greater than /${currentInfo.prefix} and at most /32.`);
+        return;
+      }
+    } else {
+      const val = document.getElementById("subnetCount").value.trim();
+      const count = parseInt(val, 10);
+      if (!/^\d+$/.test(val) || Number.isNaN(count) || count < 1) {
+        T.showError(splitError, "Number of subnets must be at least 1.");
+        return;
+      }
+      const bitsNeeded = count > 1 ? T.bitLength(count - 1) : 0;
+      newPrefix = currentInfo.prefix + bitsNeeded;
+      if (newPrefix > 32) {
+        T.showError(splitError, "Too many subnets requested for this network.");
+        return;
+      }
+    }
+
+    const subnetCount = Math.pow(2, newPrefix - currentInfo.prefix);
+    if (subnetCount > T.MAX_SPLIT_ROWS) {
+      T.showError(splitError, `That would produce ${subnetCount.toLocaleString()} subnets. Choose a smaller split (max ${T.MAX_SPLIT_ROWS.toLocaleString()} rows).`);
+      return;
+    }
+
+    const step = Math.pow(2, 32 - newPrefix);
+    const maskInt = T.prefixToMaskInt(newPrefix);
+    const wildcardInt = (~maskInt) >>> 0;
+
+    splitBody.innerHTML = "";
+    for (let i = 0; i < subnetCount; i++) {
+      const subNetworkInt = (currentInfo.networkInt + i * step) >>> 0;
+      const subBroadcastInt = (subNetworkInt | wildcardInt) >>> 0;
+
+      let usableRange, usableCount;
+      if (newPrefix <= 30) {
+        usableRange = `${T.intToIp((subNetworkInt + 1) >>> 0)} - ${T.intToIp((subBroadcastInt - 1) >>> 0)}`;
+        usableCount = step - 2;
+      } else if (newPrefix === 31) {
+        usableRange = `${T.intToIp(subNetworkInt)} - ${T.intToIp(subBroadcastInt)}`;
+        usableCount = 2;
+      } else {
+        usableRange = T.intToIp(subNetworkInt);
+        usableCount = 1;
+      }
+
+      const tr = document.createElement("tr");
+      [
+        T.intToIp(subNetworkInt),
+        `/${newPrefix}`,
+        usableRange,
+        T.intToIp(subBroadcastInt),
+        usableCount.toLocaleString(),
+      ].forEach((val) => {
+        const td = document.createElement("td");
+        td.textContent = val;
+        tr.appendChild(td);
+      });
+      splitBody.appendChild(tr);
+
+      if (subnetCount <= T.MAX_VISUAL_ROWS) {
+        const seg = document.createElement("div");
+        seg.className = "seg";
+        seg.title = `${T.intToIp(subNetworkInt)}/${newPrefix}`;
+        splitVisual.appendChild(seg);
+      }
+    }
+
+    if (subnetCount <= T.MAX_VISUAL_ROWS) splitVisual.style.display = "flex";
+
+    splitNote.textContent = `${subnetCount.toLocaleString()} subnet${subnetCount === 1 ? "" : "s"} of /${newPrefix}.`;
+  }
+
+  document.getElementById("splitBtn").addEventListener("click", splitNetwork);
+  document.getElementById("newPrefix").addEventListener("keydown", (e) => { if (e.key === "Enter") splitNetwork(); });
+  document.getElementById("subnetCount").addEventListener("keydown", (e) => { if (e.key === "Enter") splitNetwork(); });
+})();
+</script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2c335d77914ebe7',t:'MTc4NjkxMjM2Nw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

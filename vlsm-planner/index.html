@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VLSM Subnet Planner — Right-Sized Subnets from a Host List</title>
+<meta name="description" content="Plan VLSM (variable-length subnet mask) allocations: give a list of names and host counts and get right-sized, efficiently-packed subnets.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' font-size='80'%3E%3Ctext y='.9em'%3E%F0%9F%8C%90%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body><a href="../cdn-cgi/content@id=09tkFTefumwoG3FbDxkkrvIoEJqWwszV2EUw9IqAjR0-1786912367.3879464-1.2.1.1-qU6Yry4cLDIOxKaupuv30S8T1hld20BjrphL4gtu5rmsoBxHDjV1aC2y_M00KGsf.html" aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a>
+<div class="container">
+
+  <header>
+    <a class="brand" href="../index.html">
+      <div>
+        <h1>VLSM Subnet Planner</h1>
+        <p>Right-sized subnets packed efficiently from a list of host requirements</p>
+      </div>
+    </a>
+    <img class="logo" src="../assets/5pings-logo.png" alt="5pings.net">
+  </header>
+
+  <nav class="toc">
+    <a href="../index.html">Home</a>
+    <a href="../ipv4-calculator/index.html">IPv4 Calculator</a>
+    <a href="../subnet-splitter/index.html">Subnet Splitter</a>
+    <a href="index.html" class="active">VLSM Planner</a>
+    <a href="../ipv6-calculator/index.html">IPv6 Calculator</a>
+    <a href="../reverse-lookup/index.html">Reverse Lookup</a>
+    <a href="../cidr-cheat-sheet/index.html">CIDR Cheat Sheet</a>
+  </nav>
+
+  <section class="card" id="ipv4">
+    <h2>1. Address Pool</h2>
+    <p class="subtext">Enter the network to carve up. This is the same calculator as the <a href="../ipv4-calculator/index.html" style="color:var(--accent);">IPv4 Calculator</a> page — a compact copy lives here so the planner works on its own.</p>
+    <div class="row">
+      <div class="field">
+        <label for="ipInput">IP Address (optionally with /CIDR)</label>
+        <input type="text" id="ipInput" value="192.168.143.210" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="field">
+        <label for="maskSelect">Subnet Mask (if no /CIDR above)</label>
+        <select id="maskSelect"></select>
+      </div>
+      <div class="field" style="flex: 0 0 auto;">
+        <button id="calcBtn">Calculate</button>
+      </div>
+    </div>
+    <div class="error-msg" id="calcError"></div>
+    <p class="subtext" id="baseSummary"></p>
+  </section>
+
+  <section class="card" id="vlsm">
+    <h2>2. Subnet Requirements</h2>
+    <p class="subtext">Uses the pool above. Enter one requirement per line as <code class="inline">Name,HostsNeeded</code> (e.g. <code class="inline">Sales,50</code>) or just a number — subnets are sized to the smallest block that fits and packed efficiently, largest first.</p>
+    <div class="row">
+      <div class="field" style="flex: 1 1 100%;">
+        <label for="vlsmInput">Subnet requirements</label>
+        <textarea id="vlsmInput" placeholder="Sales,50&#10;Engineering,20&#10;Guest,10&#10;Servers,5">Sales,50
+Engineering,20
+Guest,10
+Servers,5</textarea>
+      </div>
+    </div>
+    <div class="toolbar">
+      <button id="vlsmBtn">Generate VLSM Plan</button>
+    </div>
+    <div class="error-msg" id="vlsmError"></div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Hosts Needed</th>
+            <th>CIDR</th>
+            <th>Network</th>
+            <th>Usable Range</th>
+            <th>Broadcast</th>
+            <th>Usable Hosts</th>
+          </tr>
+        </thead>
+        <tbody id="vlsmBody"></tbody>
+      </table>
+    </div>
+    <p class="subtext" id="vlsmNote"></p>
+  </section>
+
+  <details class="card" id="howitworks">
+    <summary>How VLSM differs from a plain split</summary>
+    <div class="body-pad">
+      <p class="explain">The <a href="../subnet-splitter/index.html" style="color:var(--accent);">Subnet Splitter</a> divides a network into <em>equal</em>-sized pieces. VLSM (Variable-Length Subnet Masking) instead sizes each subnet to what it actually needs, then packs them into the pool largest-first so the address space isn't wasted on undersized requirements getting an oversized block.</p>
+      <p class="explain">Example: a department needing 50 hosts gets a /26 (64 addresses, 62 usable), while one needing 5 hosts gets a /29 (8 addresses, 6 usable) — instead of every department being forced onto the same fixed prefix.</p>
+    </div>
+  </details>
+
+  <footer>
+    Runs entirely in your browser &mdash; no data is sent anywhere.
+  </footer>
+</div>
+
+<script src="../assets/subnet-tools.js"></script>
+<script>
+(function () {
+  "use strict";
+  const T = window.SubnetTools;
+
+  let currentInfo = null;
+
+  T.setupIPv4Panel({
+    ipInputId: "ipInput",
+    maskSelectId: "maskSelect",
+    calcBtnId: "calcBtn",
+    errorId: "calcError",
+    defaultPrefix: 24,
+    onResult: (info) => {
+      currentInfo = info;
+      const summary = document.getElementById("baseSummary");
+      summary.textContent = info ? `Address pool: ${T.intToIp(info.networkInt)}/${info.prefix}` : "";
+    },
+  });
+
+  // ----------------------------------------------------------- VLSM Planner
+  function generateVlsm() {
+    const vlsmError = document.getElementById("vlsmError");
+    const vlsmBody = document.getElementById("vlsmBody");
+    const vlsmNote = document.getElementById("vlsmNote");
+    T.showError(vlsmError, "");
+    vlsmNote.textContent = "";
+    vlsmBody.innerHTML = "";
+
+    if (!currentInfo) {
+      T.showError(vlsmError, "Calculate an address pool first (see step 1 above).");
+      return;
+    }
+    const parsedInput = T.parseVlsmInput(document.getElementById("vlsmInput").value);
+    if (parsedInput.error) {
+      T.showError(vlsmError, parsedInput.error);
+      return;
+    }
+    const plan = T.vlsmPlan(currentInfo.networkInt, currentInfo.prefix, parsedInput.reqs);
+    if (plan.error) {
+      T.showError(vlsmError, plan.error);
+      return;
+    }
+
+    for (const r of plan.results) {
+      const maskInt = T.prefixToMaskInt(r.prefix);
+      const wildcardInt = (~maskInt) >>> 0;
+      const broadcastInt = (r.networkInt | wildcardInt) >>> 0;
+      let usableRange, usableCount;
+      if (r.prefix <= 30) {
+        usableRange = `${T.intToIp((r.networkInt + 1) >>> 0)} - ${T.intToIp((broadcastInt - 1) >>> 0)}`;
+        usableCount = r.blockSize - 2;
+      } else if (r.prefix === 31) {
+        usableRange = `${T.intToIp(r.networkInt)} - ${T.intToIp(broadcastInt)}`;
+        usableCount = 2;
+      } else {
+        usableRange = T.intToIp(r.networkInt);
+        usableCount = 1;
+      }
+      const tr = document.createElement("tr");
+      [r.name, r.hosts.toLocaleString(), `/${r.prefix}`, T.intToIp(r.networkInt), usableRange, T.intToIp(broadcastInt), usableCount.toLocaleString()].forEach((v) => {
+        const td = document.createElement("td");
+        td.textContent = v;
+        tr.appendChild(td);
+      });
+      vlsmBody.appendChild(tr);
+    }
+
+    const usedPct = ((plan.usedAddresses / plan.poolSize) * 100).toFixed(1);
+    vlsmNote.textContent = `Allocated ${plan.usedAddresses.toLocaleString()} of ${plan.poolSize.toLocaleString()} addresses (${usedPct}%) from ${T.intToIp(currentInfo.networkInt)}/${currentInfo.prefix}.`;
+  }
+
+  document.getElementById("vlsmBtn").addEventListener("click", generateVlsm);
+})();
+</script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2c335d82b28ebe7',t:'MTc4NjkxMjM2Nw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reverse Subnet Lookup — What Subnet Is This IP In?</title>
+<meta name="description" content="Paste a list of known IPv4 CIDR networks and check which one(s) contain a given address — useful for troubleshooting which VLAN/subnet an IP belongs to.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' font-size='80'%3E%3Ctext y='.9em'%3E%F0%9F%8C%90%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body><a href="../cdn-cgi/content@id=Kh.NubXRkcjpnO5BBqrH1DLk.McEfLAT1d3G3M4KTd0-1786912367.6445112-1.2.1.1-35Swuk5FvYe7vEVK_fIM4YiCV3ynjZvnjjaG0ExpUdZ9GnqV2p05s16XbuguYUFy.html" aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a>
+<div class="container">
+
+  <header>
+    <a class="brand" href="../index.html">
+      <div>
+        <h1>Reverse Subnet Lookup</h1>
+        <p>"What subnet is this IP in?" — check an address against a list of known networks</p>
+      </div>
+    </a>
+    <img class="logo" src="../assets/5pings-logo.png" alt="5pings.net">
+  </header>
+
+  <nav class="toc">
+    <a href="../index.html">Home</a>
+    <a href="../ipv4-calculator/index.html">IPv4 Calculator</a>
+    <a href="../subnet-splitter/index.html">Subnet Splitter</a>
+    <a href="../vlsm-planner/index.html">VLSM Planner</a>
+    <a href="../ipv6-calculator/index.html">IPv6 Calculator</a>
+    <a href="index.html" class="active">Reverse Lookup</a>
+    <a href="../cidr-cheat-sheet/index.html">CIDR Cheat Sheet</a>
+  </nav>
+
+  <section class="card" id="reverse">
+    <h2>Reverse Lookup</h2>
+    <p class="subtext">Paste your known networks below (one CIDR per line) and check which ones contain a given IPv4 address. Handy for troubleshooting which VLAN/subnet an address belongs to.</p>
+    <div class="row">
+      <div class="field">
+        <label for="revIp">IP Address to check</label>
+        <input type="text" id="revIp" value="192.168.1.55" autocomplete="off" spellcheck="false">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field" style="flex: 1 1 100%;">
+        <label for="revNetworks">Known networks (one per line)</label>
+        <textarea id="revNetworks" placeholder="10.0.0.0/8&#10;192.168.1.0/24&#10;192.168.1.128/26">10.0.0.0/8
+192.168.1.0/24
+192.168.1.128/26
+172.16.4.0/22</textarea>
+      </div>
+    </div>
+    <div class="toolbar"><button id="revBtn">Find Matches</button></div>
+    <div class="error-msg" id="revError"></div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Network</th>
+            <th>Prefix</th>
+            <th>Result</th>
+          </tr>
+        </thead>
+        <tbody id="revBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <details class="card" id="howitworks">
+    <summary>How the match is decided</summary>
+    <div class="body-pad">
+      <p class="explain">For each network line, the tool ANDs your target IP with that network's subnet mask and compares it to the network address — if they match, the IP falls inside that block. When several networks overlap and all contain the address, the one with the <strong>longest prefix</strong> (most specific, e.g. /26 over /24) is marked as the best match — the same longest-prefix-match rule real routers use.</p>
+    </div>
+  </details>
+
+  <footer>
+    Runs entirely in your browser &mdash; no data is sent anywhere.
+  </footer>
+</div>
+
+<script src="../assets/subnet-tools.js"></script>
+<script>
+(function () {
+  "use strict";
+  const T = window.SubnetTools;
+
+  function parseCidrLine(line) {
+    line = line.trim();
+    if (!line || line.startsWith("#")) return null;
+    let ipStr = line, prefix = 32;
+    if (line.includes("/")) {
+      const parts = line.split("/");
+      ipStr = parts[0];
+      prefix = parseInt(parts[1], 10);
+    }
+    const ipInt = T.ipToInt(ipStr);
+    if (ipInt === null || Number.isNaN(prefix) || prefix < 0 || prefix > 32) return { error: line };
+    return { raw: line, ipInt, prefix };
+  }
+
+  function reverseLookup() {
+    const revError = document.getElementById("revError");
+    const revBody = document.getElementById("revBody");
+    T.showError(revError, "");
+    revBody.innerHTML = "";
+
+    const targetRaw = document.getElementById("revIp").value.trim();
+    const targetInt = T.ipToInt(targetRaw);
+    if (targetInt === null) {
+      T.showError(revError, `'${targetRaw}' is not a valid IPv4 address.`);
+      return;
+    }
+
+    const lines = document.getElementById("revNetworks").value.split("\n");
+    const matches = [];
+    const badLines = [];
+    for (const line of lines) {
+      const parsed = parseCidrLine(line);
+      if (!parsed) continue;
+      if (parsed.error) { badLines.push(parsed.error); continue; }
+      const maskInt = T.prefixToMaskInt(parsed.prefix);
+      const netInt = (parsed.ipInt & maskInt) >>> 0;
+      const inRange = ((targetInt & maskInt) >>> 0) === netInt;
+      matches.push({ network: T.intToIp(netInt), prefix: parsed.prefix, inRange });
+    }
+
+    if (!matches.length) {
+      T.showError(revError, badLines.length ? `No valid networks entered. Skipped: ${badLines.join(", ")}` : "No valid networks entered.");
+      return;
+    }
+    if (badLines.length) T.showError(revError, `Skipped invalid line(s): ${badLines.join(", ")}`);
+
+    matches.sort((a, b) => b.prefix - a.prefix);
+    const contained = matches.filter((m) => m.inRange);
+    const bestPrefix = contained.length ? contained[0].prefix : null;
+
+    for (const m of matches) {
+      const tr = document.createElement("tr");
+      [`${m.network}/${m.prefix}`, `/${m.prefix}`].forEach((v) => {
+        const td = document.createElement("td");
+        td.textContent = v;
+        tr.appendChild(td);
+      });
+      const td = document.createElement("td");
+      if (m.inRange) {
+        td.textContent = m.prefix === bestPrefix ? "✔ Best match" : "✔ Contains";
+        td.style.color = "var(--accent)";
+      } else {
+        td.textContent = "—";
+        td.style.color = "var(--subtext)";
+      }
+      tr.appendChild(td);
+      revBody.appendChild(tr);
+    }
+  }
+
+  document.getElementById("revBtn").addEventListener("click", reverseLookup);
+})();
+</script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2c335d9c8b1ebe7',t:'MTc4NjkxMjM2Nw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

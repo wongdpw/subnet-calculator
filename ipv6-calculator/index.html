@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IPv6 Subnet Calculator — Expand, Compress &amp; Inspect</title>
+<meta name="description" content="Free IPv6 calculator: expand or compress an address, and get network address, network range, total addresses, and address type for any prefix.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' font-size='80'%3E%3Ctext y='.9em'%3E%F0%9F%8C%90%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body><a href="../cdn-cgi/content@id=Pdd0bUTUeae1JMXAxp4yOOxgbNrUgMrDJKf7a.6qrVE-1786912367.4929316-1.2.1.1-8u7Nt4WkeBjZvk8VqLE_YGQzt6U.ns8RlenZ6bpj9xmSxjQFoAYztzxfYBMEI38s.html" aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a>
+<div class="container">
+
+  <header>
+    <a class="brand" href="../index.html">
+      <div>
+        <h1>IPv6 Subnet Calculator</h1>
+        <p>Expand, compress, and inspect an IPv6 address and prefix</p>
+      </div>
+    </a>
+    <img class="logo" src="../assets/5pings-logo.png" alt="5pings.net">
+  </header>
+
+  <nav class="toc">
+    <a href="../index.html">Home</a>
+    <a href="../ipv4-calculator/index.html">IPv4 Calculator</a>
+    <a href="../subnet-splitter/index.html">Subnet Splitter</a>
+    <a href="../vlsm-planner/index.html">VLSM Planner</a>
+    <a href="index.html" class="active">IPv6 Calculator</a>
+    <a href="../reverse-lookup/index.html">Reverse Lookup</a>
+    <a href="../cidr-cheat-sheet/index.html">CIDR Cheat Sheet</a>
+  </nav>
+
+  <section class="card" id="ipv6">
+    <h2>IPv6 Address / Prefix</h2>
+    <div class="row">
+      <div class="field">
+        <label for="ip6Input">IPv6 Address (optionally with /prefix)</label>
+        <input type="text" id="ip6Input" value="2001:db8::1/64" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="field">
+        <label for="ip6PrefixSelect">Prefix (if none above)</label>
+        <select id="ip6PrefixSelect"></select>
+      </div>
+      <div class="field" style="flex: 0 0 auto;">
+        <button id="calc6Btn">Calculate</button>
+      </div>
+    </div>
+    <div class="error-msg" id="calc6Error"></div>
+    <div class="table-wrap">
+      <table id="results6Table" class="kv-table">
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <details class="card" id="howitworks">
+    <summary>IPv6 address types, briefly</summary>
+    <div class="body-pad">
+      <p class="explain">IPv6 addresses are 128 bits, written as eight groups of hex digits (e.g. <code class="inline">2001:0db8:0000:0000:0000:0000:0000:0001</code>), usually <strong>compressed</strong> by dropping leading zeros in each group and collapsing the longest run of all-zero groups to <code class="inline">::</code> (giving <code class="inline">2001:db8::1</code>).</p>
+      <p class="explain">Common ranges you'll run into: <code class="inline">fe80::/10</code> link-local, <code class="inline">fc00::/7</code> unique local (private), <code class="inline">2001:db8::/32</code> reserved for documentation, and <code class="inline">2000::/3</code> global unicast (the publicly routable space). Full list on the <a href="../cidr-cheat-sheet/index.html" style="color:var(--accent);">CIDR Cheat Sheet</a> page.</p>
+    </div>
+  </details>
+
+  <footer>
+    Runs entirely in your browser &mdash; no data is sent anywhere.
+  </footer>
+</div>
+
+<script src="../assets/subnet-tools.js"></script>
+<script>
+(function () {
+  "use strict";
+  const T = window.SubnetTools;
+
+  const ip6PrefixSelect = document.getElementById("ip6PrefixSelect");
+  for (let prefix = 0; prefix <= 128; prefix++) {
+    const opt = document.createElement("option");
+    opt.value = String(prefix);
+    opt.textContent = `/${prefix}`;
+    if (prefix === 64) opt.selected = true;
+    ip6PrefixSelect.appendChild(opt);
+  }
+
+  function parseV6NetworkInput() {
+    const raw = document.getElementById("ip6Input").value.trim();
+    if (!raw) return { error: "Please enter an IPv6 address." };
+    let ipStr = raw, prefix;
+    if (raw.includes("/")) {
+      const idx = raw.lastIndexOf("/");
+      ipStr = raw.slice(0, idx);
+      const pStr = raw.slice(idx + 1).trim();
+      if (!/^\d{1,3}$/.test(pStr)) return { error: `'${pStr}' is not a valid prefix length.` };
+      prefix = parseInt(pStr, 10);
+      if (prefix < 0 || prefix > 128) return { error: "Prefix length must be between 0 and 128." };
+    } else {
+      prefix = parseInt(ip6PrefixSelect.value, 10);
+    }
+    const ipBig = T.ipv6ToBigInt(ipStr);
+    if (ipBig === null) return { error: `'${ipStr.trim()}' is not a valid IPv6 address.` };
+    return { ip: ipBig, prefix };
+  }
+
+  function calculate6() {
+    const calc6Error = document.getElementById("calc6Error");
+    T.showError(calc6Error, "");
+    const parsed = parseV6NetworkInput();
+    if (parsed.error) {
+      T.showError(calc6Error, parsed.error);
+      return;
+    }
+    const info = T.computeV6Fields(parsed.ip, parsed.prefix);
+    T.renderRowsWithCopy(document.querySelector("#results6Table tbody"), info.rows);
+  }
+
+  document.getElementById("calc6Btn").addEventListener("click", calculate6);
+  document.getElementById("ip6Input").addEventListener("keydown", (e) => { if (e.key === "Enter") calculate6(); });
+  ip6PrefixSelect.addEventListener("change", calculate6);
+
+  calculate6(); // populate with the default example on load
+})();
+</script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2c335d8dd67ebe7',t:'MTc4NjkxMjM2Nw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

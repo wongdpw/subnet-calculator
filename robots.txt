@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Subnet Calculator &amp; Networking Tools — 5pings</title>
+<meta name="description" content="Free browser-based subnetting toolkit: IPv4 calculator, subnet splitter, VLSM planner, IPv6 calculator, reverse lookup, and a CIDR cheat sheet.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' font-size='80'%3E%3Ctext y='.9em'%3E%F0%9F%8C%90%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div>
+      <h1>Subnet Calculator &amp; Networking Tools</h1>
+      <p>IPv4 &amp; IPv6 network details, VLSM planning, reverse lookup, and reference tables</p>
+    </div>
+    <img class="logo" src="assets/5pings-logo.png" alt="5pings.net">
+  </header>
+
+  <nav class="toc">
+    <a href="index.html" class="active">Home</a>
+    <a href="ipv4-calculator/index.html">IPv4 Calculator</a>
+    <a href="subnet-splitter/index.html">Subnet Splitter</a>
+    <a href="vlsm-planner/index.html">VLSM Planner</a>
+    <a href="ipv6-calculator/index.html">IPv6 Calculator</a>
+    <a href="reverse-lookup/index.html">Reverse Lookup</a>
+    <a href="cidr-cheat-sheet/index.html">CIDR Cheat Sheet</a>
+  </nav>
+
+  <div class="tool-grid">
+    <a class="tool-card" href="ipv4-calculator/index.html">
+      <h3>IPv4 Calculator</h3>
+      <p>Enter an IP and mask or CIDR to get network address, broadcast, usable range, wildcard mask, class, and binary breakdown.</p>
+    </a>
+    <a class="tool-card" href="subnet-splitter/index.html">
+      <h3>Subnet Splitter</h3>
+      <p>Break one network into a set of smaller, equally-sized subnets — split by new prefix length or by number of subnets needed.</p>
+    </a>
+    <a class="tool-card" href="vlsm-planner/index.html">
+      <h3>VLSM Planner</h3>
+      <p>Give it a list of departments and host counts; it packs right-sized subnets into your address pool as efficiently as possible.</p>
+    </a>
+    <a class="tool-card" href="ipv6-calculator/index.html">
+      <h3>IPv6 Calculator</h3>
+      <p>Expand, compress, and inspect an IPv6 address and prefix — network range, address type, and total addresses.</p>
+    </a>
+    <a class="tool-card" href="reverse-lookup/index.html">
+      <h3>Reverse Lookup</h3>
+      <p>Paste a list of known CIDR networks and check which one(s) a given IPv4 address falls inside — handy for VLAN troubleshooting.</p>
+    </a>
+    <a class="tool-card" href="cidr-cheat-sheet/index.html">
+      <h3>CIDR Cheat Sheet</h3>
+      <p>Full /8–/32 prefix-to-mask reference table, plus the common private &amp; reserved IPv4/IPv6 ranges.</p>
+    </a>
+  </div>
+
+  <section class="card" id="ipv4">
+    <h2>IPv4 Address / Mask</h2>
+    <div class="row">
+      <div class="field">
+        <label for="ipInput">IP Address (optionally with /CIDR)</label>
+        <input type="text" id="ipInput" value="192.168.143.210" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="field">
+        <label for="maskSelect">Subnet Mask (if no /CIDR above)</label>
+        <select id="maskSelect"></select>
+      </div>
+      <div class="field" style="flex: 0 0 auto;">
+        <button id="calcBtn">Calculate</button>
+      </div>
+    </div>
+    <div class="error-msg" id="calcError"></div>
+    <div class="table-wrap">
+      <table id="resultsTable" class="kv-table">
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="subtext">Need the splitter, VLSM planner, or share links? Head to the <a href="ipv4-calculator/index.html" style="color:var(--accent);">full IPv4 Calculator page</a>.</p>
+  </section>
+
+  <footer>
+    Runs entirely in your browser &mdash; no data is sent anywhere.
+  </footer>
+</div>
+
+<script src="assets/subnet-tools.js"></script>
+<script>
+(function () {
+  "use strict";
+  const T = window.SubnetTools;
+
+  T.setupIPv4Panel({
+    ipInputId: "ipInput",
+    maskSelectId: "maskSelect",
+    calcBtnId: "calcBtn",
+    errorId: "calcError",
+    defaultPrefix: 24,
+    onResult: (info) => {
+      if (info) T.renderRowsWithCopy(document.querySelector("#resultsTable tbody"), info.rows);
+    },
+  });
+})();
+</script>
+</body>
+</html>

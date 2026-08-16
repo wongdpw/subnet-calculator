@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CIDR Cheat Sheet — /8 to /32 Subnet Mask Reference</title>
+<meta name="description" content="Full CIDR-to-subnet-mask reference table from /8 to /32, plus the common private and reserved IPv4 and IPv6 address ranges.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' font-size='80'%3E%3Ctext y='.9em'%3E%F0%9F%8C%90%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body><a href="../cdn-cgi/content@id=ynb7yhSjmKPJF61GtolhcS9YUwmq4c46PbC7LTy7tfc-1786912367.7448685-1.2.1.1-mKX5rWQpy4qadsRoLXFYKxo.0c3gV56JnnNAhe8bM.1FEtH6eJlMQec_UVhSNYxO.html" aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a>
+<div class="container">
+
+  <header>
+    <a class="brand" href="../index.html">
+      <div>
+        <h1>CIDR Cheat Sheet</h1>
+        <p>Subnet mask reference table, plus common private &amp; reserved ranges</p>
+      </div>
+    </a>
+    <img class="logo" src="../assets/5pings-logo.png" alt="5pings.net">
+  </header>
+
+  <nav class="toc">
+    <a href="../index.html">Home</a>
+    <a href="../ipv4-calculator/index.html">IPv4 Calculator</a>
+    <a href="../subnet-splitter/index.html">Subnet Splitter</a>
+    <a href="../vlsm-planner/index.html">VLSM Planner</a>
+    <a href="../ipv6-calculator/index.html">IPv6 Calculator</a>
+    <a href="../reverse-lookup/index.html">Reverse Lookup</a>
+    <a href="index.html" class="active">CIDR Cheat Sheet</a>
+  </nav>
+
+  <section class="card" id="cheatsheet">
+    <h2>CIDR Cheat Sheet (/8 – /32)</h2>
+    <p class="subtext">Bookmark this: the full mapping from prefix length to subnet mask, wildcard mask, total addresses, and usable hosts. Need this applied to a real address? Try the <a href="../ipv4-calculator/index.html" style="color:var(--accent);">IPv4 Calculator</a>.</p>
+    <div class="table-wrap">
+      <table class="ref-table">
+        <thead>
+          <tr>
+            <th>CIDR</th>
+            <th>Subnet Mask</th>
+            <th>Wildcard Mask</th>
+            <th>Total Addresses</th>
+            <th>Usable Hosts</th>
+          </tr>
+        </thead>
+        <tbody id="cheatBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card" id="privateranges">
+    <h2>Common Private &amp; Reserved Ranges</h2>
+    <h3 class="sub-heading">IPv4</h3>
+    <div class="table-wrap">
+      <table class="ref-table">
+        <thead><tr><th>Range</th><th>Name</th><th>Description</th></tr></thead>
+        <tbody id="privBodyV4"></tbody>
+      </table>
+    </div>
+    <h3 class="sub-heading">IPv6</h3>
+    <div class="table-wrap">
+      <table class="ref-table">
+        <thead><tr><th>Range</th><th>Name</th><th>Description</th></tr></thead>
+        <tbody id="privBodyV6"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    Runs entirely in your browser &mdash; no data is sent anywhere.
+  </footer>
+</div>
+
+<script src="../assets/subnet-tools.js"></script>
+<script>
+(function () {
+  "use strict";
+  const T = window.SubnetTools;
+
+  const cheatBody = document.getElementById("cheatBody");
+  const cheatRows = [];
+  for (let p = 8; p <= 32; p++) {
+    const maskInt = T.prefixToMaskInt(p);
+    const wildcardInt = (~maskInt) >>> 0;
+    const total = Math.pow(2, 32 - p);
+    let usable;
+    if (p <= 30) usable = total - 2; else if (p === 31) usable = 2; else usable = 1;
+    cheatRows.push([`/${p}`, T.intToIp(maskInt), T.intToIp(wildcardInt), total.toLocaleString(), usable.toLocaleString()]);
+  }
+  T.fillRefTable(cheatBody, cheatRows);
+
+  T.fillRefTable(document.getElementById("privBodyV4"), T.PRIVATE_RANGES_INFO_V4);
+  T.fillRefTable(document.getElementById("privBodyV6"), T.PRIVATE_RANGES_INFO_V6);
+})();
+</script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2c335da6aa7ebe7',t:'MTc4NjkxMjM2Nw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

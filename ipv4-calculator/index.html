@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IPv4 Subnet Calculator — Network, Broadcast &amp; Host Range</title>
+<meta name="description" content="Free IPv4 subnet calculator: enter an address and CIDR or mask to get network address, broadcast, usable host range, wildcard mask, class, and binary breakdown.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' font-size='80'%3E%3Ctext y='.9em'%3E%F0%9F%8C%90%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body><a href="../cdn-cgi/content@id=ZVNQxQ_cspL_4XVHKZkvQHF_uH07Dd6Qp2K3rnOjbSE-1786912367.174115-1.2.1.1-egwzuSwpQY8otz2Ilfop_Et6hX_kGuNWtDOgOTjvMky1c_2feJMCRLxOemedhmVx.html" aria-hidden="true" rel="nofollow noopener" style="display: none !important; visibility: hidden !important"></a>
+<div class="container">
+
+  <header>
+    <a class="brand" href="../index.html">
+      <div>
+        <h1>IPv4 Subnet Calculator</h1>
+        <p>Network address, broadcast, usable host range, and binary breakdown</p>
+      </div>
+    </a>
+    <img class="logo" src="../assets/5pings-logo.png" alt="5pings.net">
+  </header>
+
+  <nav class="toc">
+    <a href="../index.html">Home</a>
+    <a href="index.html" class="active">IPv4 Calculator</a>
+    <a href="../subnet-splitter/index.html">Subnet Splitter</a>
+    <a href="../vlsm-planner/index.html">VLSM Planner</a>
+    <a href="../ipv6-calculator/index.html">IPv6 Calculator</a>
+    <a href="../reverse-lookup/index.html">Reverse Lookup</a>
+    <a href="../cidr-cheat-sheet/index.html">CIDR Cheat Sheet</a>
+  </nav>
+
+  <section class="card" id="ipv4">
+    <h2>IPv4 Address / Mask</h2>
+    <div class="row">
+      <div class="field">
+        <label for="ipInput">IP Address (optionally with /CIDR)</label>
+        <input type="text" id="ipInput" value="192.168.143.210" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="field">
+        <label for="maskSelect">Subnet Mask (if no /CIDR above)</label>
+        <select id="maskSelect"></select>
+      </div>
+      <div class="field" style="flex: 0 0 auto;">
+        <button id="calcBtn">Calculate</button>
+      </div>
+    </div>
+    <div class="error-msg" id="calcError"></div>
+  </section>
+
+  <section class="card" id="results">
+    <h2>Results</h2>
+    <div class="toolbar">
+      <button class="btn-sm" id="copyTextBtn">Copy as Text</button>
+      <button class="btn-sm" id="copyCsvBtn">Copy as CSV</button>
+      <button class="btn-sm" id="copyLinkBtn">Copy Shareable Link</button>
+    </div>
+    <div class="table-wrap">
+      <table id="resultsTable" class="kv-table">
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="subtext">Want to break this network into smaller pieces? Try the <a href="../subnet-splitter/index.html" style="color:var(--accent);">Subnet Splitter</a> or the <a href="../vlsm-planner/index.html" style="color:var(--accent);">VLSM Planner</a>.</p>
+  </section>
+
+  <details class="card" id="howitworks">
+    <summary>How Subnetting Works</summary>
+    <div class="body-pad">
+      <p class="explain">An IPv4 address is 32 bits, usually written as four decimal octets (e.g. <code class="inline">192.168.1.10</code>). A subnet mask (or its shorthand, the <code class="inline">/CIDR</code> prefix) tells you how many of those bits identify the <strong>network</strong> and how many are left over to identify <strong>hosts</strong> on that network.</p>
+
+      <h3 class="sub-heading">Worked example: 192.168.1.10/26</h3>
+      <ul class="explain-list explain">
+        <li><code class="inline">/26</code> means the first 26 bits are the network portion, leaving 6 bits for hosts.</li>
+        <li>6 host bits = 2<sup>6</sup> = 64 total addresses per subnet.</li>
+        <li>The subnet mask is <code class="inline">255.255.255.192</code> (26 ones, then zeros).</li>
+        <li>The network address (all host bits zero) is <code class="inline">192.168.1.0</code>.</li>
+        <li>The broadcast address (all host bits one) is <code class="inline">192.168.1.63</code>.</li>
+        <li>Usable host addresses are everything in between: <code class="inline">192.168.1.1 – 192.168.1.62</code> (64 − 2 = 62 usable hosts).</li>
+      </ul>
+
+      <h3 class="sub-heading">Why subnet at all?</h3>
+      <p class="explain">Splitting one large network into smaller subnets reduces broadcast traffic, lets you apply different firewall/VLAN policy per segment, and avoids wasting address space on a department that only needs 10 hosts but was handed a /24 (254 usable addresses). That's what the <a href="../subnet-splitter/index.html" style="color:var(--accent);">Subnet Splitter</a> and <a href="../vlsm-planner/index.html" style="color:var(--accent);">VLSM Planner</a> help you do.</p>
+
+      <h3 class="sub-heading">Quick mental model</h3>
+      <p class="explain">Bigger prefix number (e.g. /28) → fewer host bits → smaller subnet. Smaller prefix number (e.g. /16) → more host bits → bigger subnet. Every time the prefix grows by 1, the subnet size halves. Full reference: <a href="../cidr-cheat-sheet/index.html" style="color:var(--accent);">CIDR Cheat Sheet</a>.</p>
+    </div>
+  </details>
+
+  <footer>
+    Runs entirely in your browser &mdash; no data is sent anywhere.<br>
+    Tip: append <code class="inline">?ip=192.168.1.0/24</code> to the URL to link straight to a result, or <code class="inline">&amp;format=json</code> for a machine-readable response.
+  </footer>
+</div>
+
+<script src="../assets/subnet-tools.js"></script>
+<script>
+(function () {
+  "use strict";
+  const T = window.SubnetTools;
+
+  // --------------------------------------------------------- API-lite mode
+  // Append ?format=json&ip=192.168.1.0/24 to the URL to get a plain-text
+  // JSON payload instead of the interactive page.
+  const apiParams = new URLSearchParams(location.search);
+  if (apiParams.get("format") === "json") {
+    const parsed = T.parseNetworkString(apiParams.get("ip"));
+    let payload;
+    if (parsed.error) {
+      payload = { error: parsed.error };
+    } else {
+      const info = T.computeFields(parsed.ip, parsed.prefix);
+      payload = { input: apiParams.get("ip"), fields: Object.fromEntries(info.rows) };
+    }
+    document.title = "IPv4 Subnet Calculator — JSON result";
+    document.body.textContent = JSON.stringify(payload, null, 2);
+    document.body.style.cssText = "white-space:pre; font-family:Consolas,monospace; padding:20px; margin:0; background:#1a1f2b; color:#e8ecf5;";
+    return; // API-lite mode — skip building the interactive page below
+  }
+
+  let currentInfo = null;
+
+  const panel = T.setupIPv4Panel({
+    ipInputId: "ipInput",
+    maskSelectId: "maskSelect",
+    calcBtnId: "calcBtn",
+    errorId: "calcError",
+    defaultPrefix: 24,
+    readUrlParam: true,
+    enableShareUrl: true,
+    onResult: (info) => {
+      currentInfo = info;
+      if (info) T.renderRowsWithCopy(document.querySelector("#resultsTable tbody"), info.rows);
+    },
+  });
+
+  document.getElementById("copyTextBtn").addEventListener("click", () => {
+    if (!currentInfo) { T.showToast("Calculate a network first"); return; }
+    T.copyText(currentInfo.rows.map(([f, v]) => `${f}: ${v}`).join("\n"));
+  });
+  document.getElementById("copyCsvBtn").addEventListener("click", () => {
+    if (!currentInfo) { T.showToast("Calculate a network first"); return; }
+    const esc = (s) => /[",\n]/.test(s) ? `"${String(s).replace(/"/g, '""')}"` : s;
+    const csv = ["Field,Value"].concat(currentInfo.rows.map(([f, v]) => `${esc(f)},${esc(v)}`)).join("\n");
+    T.copyText(csv);
+  });
+  document.getElementById("copyLinkBtn").addEventListener("click", () => T.copyText(panel.buildShareUrl()));
+})();
+</script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a2c335d6deffebe7',t:'MTc4NjkxMjM2Nw=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
